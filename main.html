@@ -1,0 +1,191 @@
+/*
+*							开发日志
+*
+* 2022.12.24 开始五子棋项目，语言为c，在编译器上进行改进
+* 2023.1.30	五子棋基本可以实现下棋判断输赢功能
+* 2023.2.8	开发环境更换为c++	引入graphics库进行图片渲染(想法来自B站植物大战僵尸项目)
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <graphics.h>
+
+#define LINE  15		//LINE和ROW最大值均为29，否则编译器大小格式换行错误
+#define ROW   15		//LINE和ROW最小值均为5，以保证五子棋可完成结果判断
+						//横LINE竖ROW
+
+void PrintBoard();					//打印此时表格及棋子
+void Init_Board();					//对表格进行初始化
+void Init_Random_Time();			//用时间种子初始化	***在ComputerChoose升级时替代***
+void HumanChoose();					//玩家输入坐标进行选择
+void ComputerChoose();				//电脑随机选择	***后期提升电脑选择的准确性***
+int  Judge();						//判断输赢	***采用简单for循环，后期可修改算法***
+
+char Board[LINE + 1][ROW + 1] = { ' ' };		//将表格初始化为空格
+int HumanLine, HumanRow;						//表示玩家输入的坐标
+
+int main() {
+	int Winner;			//表示获胜者  ***1为玩家，2为机器***
+
+	Init_Board();
+	Init_Random_Time();
+	PrintBoard();
+	printf("\n这是游戏棋盘\n");
+	while (1) {
+		HumanChoose();
+		PrintBoard();
+		if (Judge() == 0) {
+			Winner = 1;
+			break;
+		}
+		ComputerChoose();
+		PrintBoard();
+		if (Judge() == 0) {
+			Winner = 2;
+			break;
+		}
+	}
+	if (Winner == 1) {
+		printf("\n游戏结束，你赢了！！！\n");
+	}
+	else if (Winner == 2) {
+		printf("\n游戏结束，电脑胜利！！！\n");
+	}
+	return 0;
+}
+
+void PrintBoard() {		//打印棋盘及棋子
+	int i = 0, j = 0;
+	//这是棋盘大体框架
+	for (i = 0; i < 2 * ROW + 1; i++) {
+		if (i % 2) {
+			for (j = 0; j < LINE; j++) {
+				printf(" %c |", Board[j][i / 2]);	//先横行再竖行表示棋子
+			}
+			printf("%d", i / 2 + 1);	//这是在每排最后加上序号
+			printf("\n");
+		}
+		else {
+			for (j = 0; j < LINE; j++) {
+				printf("--- ");
+			}
+			printf("\n");
+		}
+	}
+
+	//这是将最下面一排加上序号
+	//所加序号只适用于100以下的数（因为在编译器格式大小下五子棋最高29，故可使用）
+	i = 1;
+	while (i < LINE) {
+		if (i < 10) {
+			printf(" %d  ", i);
+			i++;
+		}
+		else if (i < 100) {
+			printf(" %d ", i);
+			i++;
+		}
+	}
+	printf("%d\n", LINE);
+
+}
+
+void Init_Board() {		//对棋盘进行初始化处理
+	int i = 0, j = 0;
+	for (i = 0; i < LINE + 1; i++) {
+		for (j = 0; j < ROW + 1; j++) {
+			Board[i][j] = ' ';
+		}
+	}
+	printf("\n按任意键开始游戏\n");
+	system("pause");
+}
+
+void Init_Random_Time() {	//在用随机数前应进行初始化，种子为时间
+
+	time_t t;
+	srand((unsigned)time(&t));
+}
+
+void HumanChoose() {	//x,y表示玩家选择的坐标
+
+	while (1) {
+		printf("\n\n请输入棋子的坐标（示例：2 3）\n");
+		scanf_s("%d %d", &HumanLine, &HumanRow);
+
+		if (HumanLine > 0 && HumanLine <= LINE && HumanRow > 0 && HumanRow <= ROW) {
+			if (Board[HumanLine - 1][HumanRow - 1] == ' ') {
+				Board[HumanLine - 1][HumanRow - 1] = 'a';		//棋子可正确显示——问题为单双引号
+				break;
+			}
+			else {
+				printf("坐标已被占用，请重新输入\n");
+			}
+		}
+		else {
+			printf("请输入正确的坐标！\n");
+		}
+	}
+}
+
+void ComputerChoose() {
+	int x, y;			//x,y表示电脑随机数产生的坐标
+	Init_Random_Time();	//使用前初始化随机数
+
+	while (1) {
+
+		//x = rand() % LINE + 1;			//在棋盘内随意下棋
+		//y = rand() % Row  + 1;
+		x = HumanLine + rand() % 3 - 1;		//在玩家刚下的棋子周围一圈进行随机下棋
+		y = HumanRow + rand() % 3 - 1;
+
+		if (x > 0 && x <= LINE && y > 0 && y <= ROW) {
+			if (Board[x - 1][y - 1] == ' ') {
+				Board[x - 1][y - 1] = 'b';
+				break;
+			}
+		}
+	}
+}
+
+int Judge() {
+	//判断输赢状态
+	//返回1表示未结束	返回0表示结束
+
+	int ResultNum = 1;
+	//判断横行
+	int i, j;
+	for (j = 0; j < ROW; j++) {
+		for (i = 0; i < LINE - 4; i++) {
+			if (Board[i][j] != ' ' && Board[i][j] == Board[i + 1][j] && Board[i][j] == Board[i + 2][j] && Board[i][j] == Board[i + 3][j] && Board[i][j] == Board[i + 4][j]) {
+				ResultNum = 0;
+			}
+		}
+	}
+	//判断竖行
+	for (i = 0; i < LINE; i++) {
+		for (j = 0; j < ROW - 4; j++) {
+			if (Board[i][j] != ' ' && Board[i][j] == Board[i][j + 1] && Board[i][j] == Board[i][j + 2] && Board[i][j] == Board[i][j + 3] && Board[i][j] == Board[i][j + 4]) {
+				ResultNum = 0;
+			}
+		}
+	}
+	//判断左下右上的斜行
+	for (i = 0; i < LINE - 4; i++) {
+		for (j = 4; j < ROW; j++) {
+			if (Board[i][j] != ' ' && Board[i][j] == Board[i + 1][j - 1] && Board[i][j] == Board[i + 2][j - 2] && Board[i][j] == Board[i + 3][j - 3] && Board[i][j] == Board[i + 4][j - 4]) {
+				ResultNum = 0;
+			}
+		}
+	}
+	//判断左上右下的斜行
+	for (i = 0; i < LINE - 4; i++) {
+		for (j = 0; j < ROW - 4; j++) {
+			if (Board[i][j] != ' ' && Board[i][j] == Board[i + 1][j + 1] && Board[i][j] == Board[i + 2][j + 2] && Board[i][j] == Board[i + 3][j + 3] && Board[i][j] == Board[i + 4][j + 4]) {
+				ResultNum = 0;
+			}
+		}
+	}
+	return ResultNum;
+}
